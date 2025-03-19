@@ -1,0 +1,27 @@
+
+.container {
+    padding: 20px;
+}
+#text-display {
+    position: relative;
+    min-height: 50px;
+    margin-top: 20px;
+    user-select: none;
+}
+.char {
+    display: inline-block;
+    padding: 5px;
+    margin: 2px;
+    border: 1px solid #ccc;
+    cursor: move;
+    user-select: none;
+    transition: background-color 0.3s;
+}
+.char.selected {
+    background-color: #ff9999;
+}
+.selection-rect {
+    position: absolute;
+    border: 2px dashed #000;
+    background-color: rgba(0, 0, 255, 0.1);
+}
