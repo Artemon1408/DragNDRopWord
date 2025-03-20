@@ -3,6 +3,7 @@ body {
   margin: 0;
   padding: 20px;
   background-color: #f5f5f5;
+  min-height: 100vh;
 }
 .container {
   max-width: 800px;
@@ -40,7 +41,7 @@ h1 {
   background-color: #45a049;
 }
 #textDisplay {
-  min-height: 100px;
+  min-height: 300px;
   border: 1px solid #ddd;
   border-radius: 4px;
   padding: 10px;
@@ -49,12 +50,13 @@ h1 {
 }
 .character {
   display: inline-block;
-  padding: 2px;
+  padding: 4px;
   margin: 2px;
   cursor: move;
   user-select: none;
-  position: relative;
+  position: absolute;
   z-index: 1;
+  transition: color 0.2s;
 }
 .character.selected {
   color: red;
@@ -66,13 +68,4 @@ h1 {
   background-color: rgba(0, 0, 255, 0.1);
   pointer-events: none;
   z-index: 2;
-}
-.instructions {
-  margin: 20px 0;
-  padding: 15px;
-  background-color: #f8f8f8;
-  border-left: 4px solid #4caf50;
-}
-.dragging {
-  opacity: 0.7;
 }
