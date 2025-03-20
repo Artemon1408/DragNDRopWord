@@ -6,12 +6,30 @@
   </head>
   <body>
     <div class="container">
-      <form action="#">
-        <input type="text" id="input-text" placeholder="Введіть текст" />
-        <button id="show-text-btn">Показати текст</button>
-      </form>
+      <h1>Текстовий маніпулятор</h1>
 
-      <div id="text-display"></div>
+      <div class="instructions">
+        <p><strong>Інструкції:</strong></p>
+        <ul>
+          <li>Введіть текст і натисніть "Відобразити"</li>
+          <li>
+            Клікніть на символ, щоб виділити його (або з Ctrl для множинного
+            вибору)
+          </li>
+          <li>
+            Використайте прямокутник для виділення групи символів (натисніть і
+            тягніть мишу)
+          </li>
+          <li>Перетягуйте виділені символи або групу виділених символів</li>
+        </ul>
+      </div>
+
+      <div class="input-container">
+        <input type="text" id="textInput" placeholder="Введіть текст..." />
+        <button id="submitBtn">Відобразити</button>
+      </div>
+
+      <div id="textDisplay"></div>
     </div>
     <script src="script.js"></script>
   </body>

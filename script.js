@@ -1,246 +1,227 @@
 document.addEventListener("DOMContentLoaded", () => {
-  const textDisplay = document.getElementById("text-display");
-  const showTextBtn = document.getElementById("show-text-btn");
+  const textInput = document.getElementById("textInput");
+  const submitBtn = document.getElementById("submitBtn");
+  const textDisplay = document.getElementById("textDisplay");
 
-  const state = {
-    isDragging: false,
-    isSelecting: false,
-    startX: 0,
-    startY: 0,
-    rectDiv: null,
-    dragStartX: 0,
-    dragStartY: 0,
-    initialPositions: [],
-    textDisplay,
-  };
+  let selectedChars = [];
+  let isDragging = false;
+  let isSelectionBoxActive = false;
+  let selectionBox = null;
+  let startX, startY;
+  let dragStartX, dragStartY;
+  let isMovingSelectedGroup = false;
+  let targetDropPosition = null;
 
-  showTextBtn.addEventListener("click", (e) => displayText(e, state));
-  textDisplay.addEventListener("mousedown", handleMouseDown(state));
+  // Відображення тексту
+  submitBtn.addEventListener("click", () => {
+    const text = textInput.value;
+    textDisplay.innerHTML = "";
+    selectedChars = [];
+
+    // Створення елементів для кожного символу
+    for (let i = 0; i < text.length; i++) {
+      const charSpan = document.createElement("span");
+      charSpan.className = "character";
+      charSpan.textContent = text[i];
+      charSpan.setAttribute("data-index", i);
+      textDisplay.appendChild(charSpan);
+
+      // Обробник кліку для виділення символів
+      charSpan.addEventListener("mousedown", (e) => {
+        if (!e.ctrlKey) {
+          // Якщо Ctrl не натиснутий, зняти всі виділення
+          if (!charSpan.classList.contains("selected")) {
+            selectedChars.forEach((char) => char.classList.remove("selected"));
+            selectedChars = [];
+          }
+        }
+
+        if (charSpan.classList.contains("selected")) {
+          // Якщо ми клікаємо на вже виділений символ, готуємося до перетягування групи
+          if (selectedChars.length > 1) {
+            isMovingSelectedGroup = true;
+            dragStartX = e.clientX;
+            dragStartY = e.clientY;
+          }
+        } else {
+          charSpan.classList.add("selected");
+          selectedChars.push(charSpan);
+        }
+
+        // Почати перетягування, якщо символ виділений
+        if (charSpan.classList.contains("selected")) {
+          isDragging = true;
+          e.preventDefault(); // Запобігти початку селекції тексту
+        }
+      });
+
+      // Обробник для визначення, чи символ може бути ціллю для переміщення
+      charSpan.addEventListener("mouseover", (e) => {
+        if (isDragging && selectedChars.length > 0) {
+          if (!selectedChars.includes(charSpan)) {
+            targetDropPosition = charSpan;
+
+            // Прибрати виділення з усіх потенційних цілей
+            document.querySelectorAll(".character").forEach((c) => {
+              if (!selectedChars.includes(c)) {
+                c.style.backgroundColor = "";
+              }
+            });
+
+            // Підсвітити поточну ціль
+            charSpan.style.backgroundColor = "lightblue";
+          }
+        }
+      });
+
+      charSpan.addEventListener("mouseout", () => {
+        if (isDragging && charSpan.style.backgroundColor === "lightblue") {
+          charSpan.style.backgroundColor = "";
+        }
+      });
+    }
+
+    // Створення прямокутника виділення
+    textDisplay.addEventListener("mousedown", (e) => {
+      // Переконатися, що клік не на символі
+      if (e.target === textDisplay) {
+        isSelectionBoxActive = true;
+        startX = e.clientX;
+        startY = e.clientY;
+
+        selectionBox = document.createElement("div");
+        selectionBox.className = "selection-box";
+        selectionBox.style.left = `${
+          e.clientX - textDisplay.getBoundingClientRect().left
+        }px`;
+        selectionBox.style.top = `${
+          e.clientY - textDisplay.getBoundingClientRect().top
+        }px`;
+        selectionBox.style.width = "0px";
+        selectionBox.style.height = "0px";
+        textDisplay.appendChild(selectionBox);
+
+        // Якщо Ctrl не натиснутий, зняти всі виділення
+        if (!e.ctrlKey) {
+          selectedChars.forEach((char) => char.classList.remove("selected"));
+          selectedChars = [];
+        }
+      }
+    });
+
+    // Обробка руху миші
+    document.addEventListener("mousemove", (e) => {
+      if (isDragging && selectedChars.length > 0) {
+        // Логіка перетягування символів
+        selectedChars.forEach((char) => {
+          if (!char.classList.contains("dragging")) {
+            char.classList.add("dragging");
+          }
+        });
+      } else if (isSelectionBoxActive && selectionBox) {
+        // Оновлення розміру і позиції прямокутника виділення
+        const currentX = e.clientX;
+        const currentY = e.clientY;
+        const displayRect = textDisplay.getBoundingClientRect();
+
+        const left = Math.min(startX, currentX) - displayRect.left;
+        const top = Math.min(startY, currentY) - displayRect.top;
+        const width = Math.abs(currentX - startX);
+        const height = Math.abs(currentY - startY);
+
+        selectionBox.style.left = `${left}px`;
+        selectionBox.style.top = `${top}px`;
+        selectionBox.style.width = `${width}px`;
+        selectionBox.style.height = `${height}px`;
+
+        // Виділення символів в прямокутнику
+        document.querySelectorAll(".character").forEach((char) => {
+          const charRect = char.getBoundingClientRect();
+
+          // Перевірка, чи символ в межах прямокутника
+          if (
+            charRect.left >= Math.min(startX, currentX) &&
+            charRect.right <= Math.max(startX, currentX) &&
+            charRect.top >= Math.min(startY, currentY) &&
+            charRect.bottom <= Math.max(startY, currentY)
+          ) {
+            if (!char.classList.contains("selected")) {
+              char.classList.add("selected");
+              selectedChars.push(char);
+            }
+          } else if (
+            !e.ctrlKey &&
+            selectedChars.indexOf(char) >= 0 &&
+            selectedChars.length > 0 &&
+            (isSelectionBoxActive || !isDragging)
+          ) {
+            // Якщо символ не в прямокутнику і не було натиснуто Ctrl, зняти виділення
+            char.classList.remove("selected");
+            selectedChars = selectedChars.filter((c) => c !== char);
+          }
+        });
+      }
+    });
+
+    // Закінчення дій миші
+    document.addEventListener("mouseup", (e) => {
+      // Виконати переміщення виділених символів, якщо є ціль
+      if (isDragging && selectedChars.length > 0 && targetDropPosition) {
+        // Видалити клас перетягування
+        selectedChars.forEach((char) => {
+          char.classList.remove("dragging");
+        });
+
+        // Очистити фон цілі
+        if (targetDropPosition) {
+          targetDropPosition.style.backgroundColor = "";
+        }
+
+        // Переміщення виділених символів до цілі
+        const parent = textDisplay;
+        const target = targetDropPosition;
+
+        // Сортування виділених символів за їх порядком у DOM
+        const sortedSelection = [...selectedChars].sort((a, b) => {
+          const aIndex = Array.from(parent.children).indexOf(a);
+          const bIndex = Array.from(parent.children).indexOf(b);
+          return aIndex - bIndex;
+        });
+
+        // Визначення порядку вставки
+        const targetIndex = Array.from(parent.children).indexOf(target);
+
+        // Переміщення всіх виділених елементів після цілі
+        sortedSelection.forEach((selected) => {
+          // Вставити перед цільовим елементом
+          parent.insertBefore(selected, target);
+        });
+
+        // Після переміщення оновити порядок символів у рядку
+        rearrangeText();
+      }
+
+      isDragging = false;
+      isMovingSelectedGroup = false;
+      targetDropPosition = null;
+
+      if (isSelectionBoxActive && selectionBox) {
+        isSelectionBoxActive = false;
+        textDisplay.removeChild(selectionBox);
+        selectionBox = null;
+      }
+    });
+
+    // Функція для оновлення порядку символів після переміщення
+    function rearrangeText() {
+      const charElements = Array.from(
+        textDisplay.querySelectorAll(".character")
+      );
+
+      // Оновити атрибути data-index для всіх символів
+      charElements.forEach((char, index) => {
+        char.setAttribute("data-index", index);
+      });
+    }
+  });
 });
-
-function displayText(e, state) {
-  e.preventDefault();
-  if (!state?.textDisplay) {
-    console.error("Invalid state");
-    return;
-  }
-
-  const input = document.getElementById("input-text");
-  const text = input.value.trim();
-  state.textDisplay.innerHTML = "";
-
-  const fragment = document.createDocumentFragment();
-  [...text].forEach((char) => {
-    fragment.appendChild(createCharElement(char));
-  });
-
-  state.textDisplay.appendChild(fragment);
-}
-
-function createCharElement(char) {
-  const span = document.createElement("span");
-  span.className = "char";
-  span.textContent = char;
-  return span;
-}
-
-function handleMouseDown(state) {
-  return (e) => {
-    if (e.target.classList.contains("char")) {
-      handleCharClick(e);
-      startDragging(e, state);
-    } else {
-      startRectSelection(e, state);
-    }
-  };
-}
-
-function handleCharClick(e) {
-  const char = e.target;
-  const isMultiSelect = e.ctrlKey || e.metaKey;
-
-  if (!isMultiSelect) {
-    clearSelections();
-  }
-
-  char.classList.toggle(
-    "selected",
-    !isMultiSelect || !char.classList.contains("selected")
-  );
-}
-
-function clearSelections() {
-  document
-    .querySelectorAll(".char.selected")
-    .forEach((char) => char.classList.remove("selected"));
-}
-
-function startRectSelection(e, state) {
-  if (e.ctrlKey) return;
-
-  state.isSelecting = true;
-  [state.startX, state.startY] = [e.clientX, e.clientY];
-
-  state.rectDiv = document.createElement("div");
-  state.rectDiv.className = "selection-rect";
-  document.body.appendChild(state.rectDiv);
-
-  document.addEventListener("mousemove", updateRect(state));
-  document.addEventListener("mouseup", endRectSelection(state));
-}
-
-function updateRect(state) {
-  return (e) => {
-    if (!state.isSelecting) return;
-
-    const { startX, startY, rectDiv } = state;
-    const [currentX, currentY] = [e.clientX, e.clientY];
-
-    rectDiv.style.left = `${Math.min(startX, currentX)}px`;
-    rectDiv.style.top = `${Math.min(startY, currentY)}px`;
-    rectDiv.style.width = `${Math.abs(currentX - startX)}px`;
-    rectDiv.style.height = `${Math.abs(currentY - startY)}px`;
-  };
-}
-
-function endRectSelection(state) {
-  return (e) => {
-    state.isSelecting = false;
-    const { startX, startY, rectDiv } = state;
-    const [endX, endY] = [e.clientX, e.clientY];
-
-    const selectionBox = {
-      left: Math.min(startX, endX),
-      right: Math.max(startX, endX),
-      top: Math.min(startY, endY),
-      bottom: Math.max(startY, endY),
-    };
-
-    highlightCharsInSelection(selectionBox);
-    cleanupRectSelection(state);
-  };
-}
-
-function highlightCharsInSelection({ left, right, top, bottom }) {
-  document.querySelectorAll(".char").forEach((char) => {
-    const rect = char.getBoundingClientRect();
-    const isInSelection = !(
-      rect.right < left ||
-      rect.left > right ||
-      rect.bottom < top ||
-      rect.top > bottom
-    );
-
-    if (isInSelection) char.classList.add("selected");
-  });
-}
-
-function cleanupRectSelection({ rectDiv }) {
-  document.body.removeChild(rectDiv);
-  document.removeEventListener("mousemove", updateRect);
-  document.removeEventListener("mouseup", endRectSelection);
-}
-
-function startDragging(e, state) {
-  if (!e.target.classList.contains("selected")) return;
-
-  state.isDragging = true;
-  [state.dragStartX, state.dragStartY] = [e.clientX, e.clientY];
-
-  const { textDisplay } = state;
-  state.initialPositions = getInitialPositions(textDisplay);
-
-  setupDraggableElements();
-  document.addEventListener("mousemove", drag(state));
-  document.addEventListener("mouseup", stopDragging(state));
-}
-
-function getInitialPositions(container) {
-  return [...document.querySelectorAll(".char.selected")].map((char) => {
-    const rect = char.getBoundingClientRect();
-    const containerRect = container.getBoundingClientRect();
-
-    return {
-      element: char,
-      x: rect.left - containerRect.left,
-      y: rect.top - containerRect.top,
-    };
-  });
-}
-
-function setupDraggableElements() {
-  document.querySelectorAll(".char.selected").forEach((char) => {
-    Object.assign(char.style, {
-      position: "absolute",
-      left: `${char.offsetLeft}px`,
-      top: `${char.offsetTop}px`,
-    });
-  });
-}
-
-function drag(state) {
-  return (e) => {
-    if (!state.isDragging) return;
-
-    const deltaX = e.clientX - state.dragStartX;
-    const deltaY = e.clientY - state.dragStartY;
-
-    state.initialPositions.forEach(({ element, x, y }) => {
-      element.style.left = `${x + deltaX}px`;
-      element.style.top = `${y + deltaY}px`;
-    });
-  };
-}
-
-function stopDragging(state) {
-  return () => {
-    state.isDragging = false;
-
-    document.querySelectorAll(".char.selected").forEach((char) => {
-      handleElementDrop(char);
-      resetElementPosition(char);
-    });
-
-    document.removeEventListener("mousemove", drag);
-    document.removeEventListener("mouseup", stopDragging);
-  };
-}
-
-function handleElementDrop(draggedChar) {
-  const draggedRect = draggedChar.getBoundingClientRect();
-
-  document.querySelectorAll(".char:not(.selected)").forEach((otherChar) => {
-    const otherRect = otherChar.getBoundingClientRect();
-
-    if (elementsOverlap(draggedRect, otherRect)) {
-      swapElements(draggedChar, otherChar);
-    }
-  });
-}
-
-function elementsOverlap(rect1, rect2) {
-  return !(
-    rect1.right < rect2.left ||
-    rect1.left > rect2.right ||
-    rect1.bottom < rect2.top ||
-    rect1.top > rect2.bottom
-  );
-}
-
-function swapElements(el1, el2) {
-  const parent = el1.parentNode;
-  const temp = document.createElement("div");
-
-  parent.insertBefore(temp, el2);
-  parent.insertBefore(el2, el1);
-  parent.insertBefore(el1, temp);
-  parent.removeChild(temp);
-}
-
-function resetElementPosition(element) {
-  Object.assign(element.style, {
-    position: "",
-    left: "",
-    top: "",
-  });
-}
