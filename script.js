@@ -12,13 +12,11 @@ document.addEventListener("DOMContentLoaded", () => {
   let isMovingSelectedGroup = false;
   let targetDropPosition = null;
 
-  // Відображення тексту
   submitBtn.addEventListener("click", () => {
     const text = textInput.value;
     textDisplay.innerHTML = "";
     selectedChars = [];
 
-    // Створення елементів для кожного символу
     for (let i = 0; i < text.length; i++) {
       const charSpan = document.createElement("span");
       charSpan.className = "character";
@@ -26,10 +24,8 @@ document.addEventListener("DOMContentLoaded", () => {
       charSpan.setAttribute("data-index", i);
       textDisplay.appendChild(charSpan);
 
-      // Обробник кліку для виділення символів
       charSpan.addEventListener("mousedown", (e) => {
         if (!e.ctrlKey) {
-          // Якщо Ctrl не натиснутий, зняти всі виділення
           if (!charSpan.classList.contains("selected")) {
             selectedChars.forEach((char) => char.classList.remove("selected"));
             selectedChars = [];
@@ -37,7 +33,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (charSpan.classList.contains("selected")) {
-          // Якщо ми клікаємо на вже виділений символ, готуємося до перетягування групи
           if (selectedChars.length > 1) {
             isMovingSelectedGroup = true;
             dragStartX = e.clientX;
@@ -48,27 +43,23 @@ document.addEventListener("DOMContentLoaded", () => {
           selectedChars.push(charSpan);
         }
 
-        // Почати перетягування, якщо символ виділений
         if (charSpan.classList.contains("selected")) {
           isDragging = true;
-          e.preventDefault(); // Запобігти початку селекції тексту
+          e.preventDefault();
         }
       });
 
-      // Обробник для визначення, чи символ може бути ціллю для переміщення
       charSpan.addEventListener("mouseover", (e) => {
         if (isDragging && selectedChars.length > 0) {
           if (!selectedChars.includes(charSpan)) {
             targetDropPosition = charSpan;
 
-            // Прибрати виділення з усіх потенційних цілей
             document.querySelectorAll(".character").forEach((c) => {
               if (!selectedChars.includes(c)) {
                 c.style.backgroundColor = "";
               }
             });
 
-            // Підсвітити поточну ціль
             charSpan.style.backgroundColor = "lightblue";
           }
         }
@@ -81,9 +72,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
-    // Створення прямокутника виділення
     textDisplay.addEventListener("mousedown", (e) => {
-      // Переконатися, що клік не на символі
       if (e.target === textDisplay) {
         isSelectionBoxActive = true;
         startX = e.clientX;
@@ -101,7 +90,6 @@ document.addEventListener("DOMContentLoaded", () => {
         selectionBox.style.height = "0px";
         textDisplay.appendChild(selectionBox);
 
-        // Якщо Ctrl не натиснутий, зняти всі виділення
         if (!e.ctrlKey) {
           selectedChars.forEach((char) => char.classList.remove("selected"));
           selectedChars = [];
@@ -109,17 +97,14 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-    // Обробка руху миші
     document.addEventListener("mousemove", (e) => {
       if (isDragging && selectedChars.length > 0) {
-        // Логіка перетягування символів
         selectedChars.forEach((char) => {
           if (!char.classList.contains("dragging")) {
             char.classList.add("dragging");
           }
         });
       } else if (isSelectionBoxActive && selectionBox) {
-        // Оновлення розміру і позиції прямокутника виділення
         const currentX = e.clientX;
         const currentY = e.clientY;
         const displayRect = textDisplay.getBoundingClientRect();
@@ -134,11 +119,9 @@ document.addEventListener("DOMContentLoaded", () => {
         selectionBox.style.width = `${width}px`;
         selectionBox.style.height = `${height}px`;
 
-        // Виділення символів в прямокутнику
         document.querySelectorAll(".character").forEach((char) => {
           const charRect = char.getBoundingClientRect();
 
-          // Перевірка, чи символ в межах прямокутника
           if (
             charRect.left >= Math.min(startX, currentX) &&
             charRect.right <= Math.max(startX, currentX) &&
@@ -155,7 +138,6 @@ document.addEventListener("DOMContentLoaded", () => {
             selectedChars.length > 0 &&
             (isSelectionBoxActive || !isDragging)
           ) {
-            // Якщо символ не в прямокутнику і не було натиснуто Ctrl, зняти виділення
             char.classList.remove("selected");
             selectedChars = selectedChars.filter((c) => c !== char);
           }
@@ -163,41 +145,31 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-    // Закінчення дій миші
     document.addEventListener("mouseup", (e) => {
-      // Виконати переміщення виділених символів, якщо є ціль
       if (isDragging && selectedChars.length > 0 && targetDropPosition) {
-        // Видалити клас перетягування
         selectedChars.forEach((char) => {
           char.classList.remove("dragging");
         });
 
-        // Очистити фон цілі
         if (targetDropPosition) {
           targetDropPosition.style.backgroundColor = "";
         }
 
-        // Переміщення виділених символів до цілі
         const parent = textDisplay;
         const target = targetDropPosition;
 
-        // Сортування виділених символів за їх порядком у DOM
         const sortedSelection = [...selectedChars].sort((a, b) => {
           const aIndex = Array.from(parent.children).indexOf(a);
           const bIndex = Array.from(parent.children).indexOf(b);
           return aIndex - bIndex;
         });
 
-        // Визначення порядку вставки
         const targetIndex = Array.from(parent.children).indexOf(target);
 
-        // Переміщення всіх виділених елементів після цілі
         sortedSelection.forEach((selected) => {
-          // Вставити перед цільовим елементом
           parent.insertBefore(selected, target);
         });
 
-        // Після переміщення оновити порядок символів у рядку
         rearrangeText();
       }
 
@@ -212,13 +184,11 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-    // Функція для оновлення порядку символів після переміщення
     function rearrangeText() {
       const charElements = Array.from(
         textDisplay.querySelectorAll(".character")
       );
 
-      // Оновити атрибути data-index для всіх символів
       charElements.forEach((char, index) => {
         char.setAttribute("data-index", index);
       });
